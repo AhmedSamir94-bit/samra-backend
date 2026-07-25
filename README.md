@@ -46,6 +46,8 @@ npm run start:dev
 
 The server runs at `http://localhost:3000` with global prefix `/api`.
 
+Swagger UI: `http://localhost:3000/api/docs` (production: `https://samra-backend.vercel.app/api/docs`).
+
 ## API Endpoints
 
 | Resource | Endpoints |

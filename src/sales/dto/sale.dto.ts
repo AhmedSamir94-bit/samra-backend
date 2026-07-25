@@ -1,3 +1,4 @@
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
@@ -10,15 +11,18 @@ import {
   ValidateNested,
 } from 'class-validator';
 
-class SaleCartItemDto {
+export class SaleCartItemDto {
+  @ApiProperty({ example: '67abc123def4567890123456', description: 'Product id' })
   @IsString()
   @IsNotEmpty()
   id!: string;
 
+  @ApiProperty({ example: 'كولا 330مل' })
   @IsString()
   @IsNotEmpty()
   name!: string;
 
+  @ApiProperty({ example: 2, minimum: 1 })
   @Type(() => Number)
   @IsNumber()
   @Min(1)
@@ -26,12 +30,14 @@ class SaleCartItemDto {
 }
 
 export class CreateSaleDto {
+  @ApiProperty({ type: [SaleCartItemDto] })
   @IsArray()
   @ArrayMinSize(1)
   @ValidateNested({ each: true })
   @Type(() => SaleCartItemDto)
   items!: SaleCartItemDto[];
 
+  @ApiPropertyOptional({ example: 'admin' })
   @IsOptional()
   @IsString()
   cashier?: string;

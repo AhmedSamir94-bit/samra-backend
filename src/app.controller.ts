@@ -17,6 +17,7 @@ export class AppController {
     const mongoConfigured = Boolean(process.env.MONGODB_URI?.trim());
     return {
       status: 'ok',
+      version: 'boot-2026-07-25c',
       mongoConfigured,
       mode: mongoConfigured ? 'full' : 'degraded',
       hint: mongoConfigured

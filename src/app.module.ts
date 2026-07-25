@@ -22,6 +22,7 @@ import { UsersModule } from './users/users.module';
         uri:
           config.get<string>('MONGODB_URI') ||
           'mongodb://admin:admin123@localhost:27017/samra?authSource=admin',
+        serverSelectionTimeoutMS: 10_000,
       }),
     }),
     UsersModule,

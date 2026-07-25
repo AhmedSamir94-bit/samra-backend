@@ -70,7 +70,11 @@ export class ProductsService implements OnModuleInit {
   }
 
   async findByBarcode(code: string) {
-    const product = await this.productModel.findOne({ barcode: code }).exec();
+    const normalized = code?.trim();
+    console.log(`[barcode] findByBarcode: "${normalized}"`);
+    const product = await this.productModel
+      .findOne({ barcode: normalized })
+      .exec();
     if (!product) {
       throw new NotFoundException('المنتج غير موجود');
     }

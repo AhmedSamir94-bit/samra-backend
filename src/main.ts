@@ -4,12 +4,6 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  if (process.env.VERCEL === '1' && !process.env.MONGODB_URI) {
-    throw new Error(
-      'MONGODB_URI is missing in Vercel env. Set it in Project Settings → Environment Variables, then Redeploy.',
-    );
-  }
-
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
   });

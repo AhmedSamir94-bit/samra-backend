@@ -14,6 +14,14 @@ export class AppController {
     schema: { example: healthOkExample },
   })
   health() {
-    return { status: 'ok' };
+    const mongoConfigured = Boolean(process.env.MONGODB_URI?.trim());
+    return {
+      status: 'ok',
+      mongoConfigured,
+      mode: mongoConfigured ? 'full' : 'degraded',
+      hint: mongoConfigured
+        ? undefined
+        : 'Set MONGODB_URI in Vercel Environment Variables and redeploy',
+    };
   }
 }

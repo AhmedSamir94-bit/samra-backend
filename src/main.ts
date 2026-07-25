@@ -4,13 +4,27 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 function getCorsOrigins() {
-  const raw =
-    process.env.CORS_ORIGIN ||
-    'http://localhost:8080,https://samra-frontend.vercel.app';
-  return raw
+  const defaults = [
+    'http://localhost:8080',
+    'http://localhost:5173',
+    'https://samra-frontend.vercel.app',
+  ];
+  const fromEnv = (process.env.CORS_ORIGIN || '')
     .split(',')
     .map((origin) => origin.trim())
     .filter(Boolean);
+  return [...new Set([...defaults, ...fromEnv])];
+}
+
+function isAllowedOrigin(origin: string | undefined) {
+  if (!origin) {
+    return true;
+  }
+  if (getCorsOrigins().includes(origin)) {
+    return true;
+  }
+  // Vercel preview deployments for this project
+  return /^https:\/\/samra-frontend(-[\w-]+)?\.vercel\.app$/.test(origin);
 }
 
 async function bootstrap() {
@@ -18,8 +32,16 @@ async function bootstrap() {
 
   app.setGlobalPrefix('api');
   app.enableCors({
-    origin: getCorsOrigins(),
+    origin: (origin, callback) => {
+      if (isAllowedOrigin(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-setup-key'],
   });
   app.useGlobalPipes(
     new ValidationPipe({

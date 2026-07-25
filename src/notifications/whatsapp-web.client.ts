@@ -33,6 +33,9 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   isActive() {
+    if (process.env.VERCEL === '1') {
+      return false;
+    }
     return (
       this.configService.get<string>('WHATSAPP_ENABLED') === 'true' &&
       this.configService.get<string>('WHATSAPP_PROVIDER') === 'wwebjs'
@@ -61,7 +64,19 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async start() {
-    const { Client, LocalAuth } = await import('whatsapp-web.js');
+    // Optional local dependency — not installed on Vercel (use greenapi there).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let Client: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let LocalAuth: any;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ({ Client, LocalAuth } = require('whatsapp-web.js'));
+    } catch {
+      throw new Error(
+        'whatsapp-web.js is not installed. Use WHATSAPP_PROVIDER=greenapi on Vercel, or npm i whatsapp-web.js locally.',
+      );
+    }
 
     const sessionPath =
       this.configService.get<string>('WHATSAPP_WEB_SESSION_PATH') ||

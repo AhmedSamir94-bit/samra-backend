@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { getModelToken } from '@nestjs/mongoose';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { Model } from 'mongoose';
 import { AppModule } from './app.module';
 import { Category } from './categories/schemas/category.schema';

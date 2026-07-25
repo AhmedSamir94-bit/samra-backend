@@ -20,7 +20,14 @@ export class ProductsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.syncCostsFromPurchases();
+    try {
+      await this.syncCostsFromPurchases();
+    } catch (error) {
+      // Don't crash serverless boot if Mongo is slow/unavailable on cold start.
+      console.warn(
+        `Products cost sync skipped: ${error instanceof Error ? error.message : error}`,
+      );
+    }
   }
 
   private async syncCostsFromPurchases() {

@@ -3,46 +3,24 @@ import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
-function getCorsOrigins() {
-  const defaults = [
-    'http://localhost:8080',
-    'http://localhost:5173',
-    'https://samra-frontend.vercel.app',
-  ];
-  const fromEnv = (process.env.CORS_ORIGIN || '')
-    .split(',')
-    .map((origin) => origin.trim())
-    .filter(Boolean);
-  return [...new Set([...defaults, ...fromEnv])];
-}
-
-function isAllowedOrigin(origin: string | undefined) {
-  if (!origin) {
-    return true;
-  }
-  if (getCorsOrigins().includes(origin)) {
-    return true;
-  }
-  // Vercel preview deployments for this project
-  return /^https:\/\/samra-frontend(-[\w-]+)?\.vercel\.app$/.test(origin);
-}
-
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   app.setGlobalPrefix('api');
+
+  // Reflect request Origin so browser CORS works on Vercel (FE <-> BE).
   app.enableCors({
-    origin: (origin, callback) => {
-      if (isAllowedOrigin(origin)) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error(`CORS blocked for origin: ${origin}`), false);
-    },
+    origin: true,
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-admin-setup-key'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'x-admin-setup-key',
+    ],
   });
+
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -68,14 +46,25 @@ async function bootstrap() {
         type: 'apiKey',
         in: 'header',
         name: 'x-admin-setup-key',
-        description: 'Optional setup key for creating admins when users already exist',
+        description:
+          'Optional setup key for creating admins when users already exist',
       },
       'admin-setup-key',
     )
+    .addServer('https://samra-backend.vercel.app', 'Production')
+    .addServer('http://localhost:3000', 'Local')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup('api/docs', app, document, {
+  // Path is relative to global prefix → /api/docs
+  // Use CDN assets so swagger-ui-dist is not bundled into the serverless function.
+  SwaggerModule.setup('docs', app, document, {
+    customCssUrl:
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css',
+    customJs: [
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-bundle.js',
+      'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui-standalone-preset.js',
+    ],
     swaggerOptions: {
       persistAuthorization: true,
     },
@@ -87,4 +76,7 @@ async function bootstrap() {
   console.log(`Swagger docs at http://localhost:${port}/api/docs`);
 }
 
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Fatal bootstrap error:', error);
+  process.exit(1);
+});

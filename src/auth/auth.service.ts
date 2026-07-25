@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcryptjs';
-import { randomBytes } from 'crypto';
 import { UsersService } from '../users/users.service';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
@@ -13,6 +12,18 @@ export interface TokenPair {
   expiresIn: number;
 }
 
+interface AccessJwtPayload {
+  sub: string;
+  username: string;
+  name: string;
+  type: 'access';
+}
+
+interface RefreshJwtPayload {
+  sub: string;
+  type: 'refresh';
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -21,10 +32,39 @@ export class AuthService {
     private configService: ConfigService,
   ) {}
 
+  private getAccessSecret() {
+    return (
+      this.configService.get<string>('JWT_ACCESS_SECRET') ||
+      'samra-access-secret-change-me'
+    );
+  }
+
+  private getRefreshSecret() {
+    return (
+      this.configService.get<string>('JWT_REFRESH_SECRET') ||
+      'samra-refresh-secret-change-me'
+    );
+  }
+
+  private getAccessExpiresIn() {
+    return this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
+  }
+
+  private getRefreshExpiresIn() {
+    return this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') || '7d';
+  }
+
   private getAccessExpiresInSeconds() {
-    const expiresIn = this.configService.get<string>('JWT_ACCESS_EXPIRES_IN') || '15m';
-    if (expiresIn.endsWith('m')) return Number(expiresIn.replace('m', '')) * 60;
-    if (expiresIn.endsWith('h')) return Number(expiresIn.replace('h', '')) * 3600;
+    const expiresIn = this.getAccessExpiresIn();
+    if (expiresIn.endsWith('m')) {
+      return Number(expiresIn.replace('m', '')) * 60;
+    }
+    if (expiresIn.endsWith('h')) {
+      return Number(expiresIn.replace('h', '')) * 3600;
+    }
+    if (expiresIn.endsWith('d')) {
+      return Number(expiresIn.replace('d', '')) * 86400;
+    }
     return Number(expiresIn) || 900;
   }
 
@@ -33,17 +73,34 @@ export class AuthService {
     username: string;
     name: string;
   }): Promise<TokenPair> {
-    const payload = {
-      sub: user._id.toString(),
-      username: user.username,
-      name: user.name,
-    };
+    const userId = user._id.toString();
 
-    const accessToken = await this.jwtService.signAsync(payload);
-    const refreshToken = randomBytes(64).toString('hex');
+    const accessToken = await this.jwtService.signAsync(
+      {
+        sub: userId,
+        username: user.username,
+        name: user.name,
+        type: 'access',
+      } satisfies AccessJwtPayload,
+      {
+        secret: this.getAccessSecret(),
+        expiresIn: this.getAccessExpiresIn() as `${number}${'s' | 'm' | 'h' | 'd'}`,
+      },
+    );
+
+    const refreshToken = await this.jwtService.signAsync(
+      {
+        sub: userId,
+        type: 'refresh',
+      } satisfies RefreshJwtPayload,
+      {
+        secret: this.getRefreshSecret(),
+        expiresIn: this.getRefreshExpiresIn() as `${number}${'s' | 'm' | 'h' | 'd'}`,
+      },
+    );
+
     const refreshTokenHash = await bcrypt.hash(refreshToken, 10);
-
-    await this.usersService.updateRefreshTokenHash(user._id.toString(), refreshTokenHash);
+    await this.usersService.updateRefreshTokenHash(userId, refreshTokenHash);
 
     return {
       accessToken,
@@ -76,20 +133,43 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    const matchedUser = await this.usersService.findUserByRefreshToken(refreshToken);
+    if (!refreshToken?.trim()) {
+      throw new UnauthorizedException('رمز التحديث مطلوب');
+    }
 
-    if (!matchedUser) {
+    let payload: RefreshJwtPayload;
+    try {
+      payload = await this.jwtService.verifyAsync<RefreshJwtPayload>(
+        refreshToken,
+        { secret: this.getRefreshSecret() },
+      );
+    } catch {
+      throw new UnauthorizedException('رمز التحديث غير صالح أو منتهي');
+    }
+
+    if (payload.type !== 'refresh' || !payload.sub) {
       throw new UnauthorizedException('رمز التحديث غير صالح');
     }
 
-    const tokens = await this.createTokenPair(matchedUser);
+    const user = await this.usersService.findById(payload.sub);
+    if (!user?.refreshTokenHash) {
+      throw new UnauthorizedException('رمز التحديث غير صالح');
+    }
+
+    const matches = await bcrypt.compare(refreshToken, user.refreshTokenHash);
+    if (!matches) {
+      // Token was rotated or user logged out
+      throw new UnauthorizedException('رمز التحديث غير صالح');
+    }
+
+    const tokens = await this.createTokenPair(user);
 
     return {
       ...tokens,
       user: {
-        id: matchedUser._id.toString(),
-        username: matchedUser.username,
-        name: matchedUser.name,
+        id: user._id.toString(),
+        username: user.username,
+        name: user.name,
       },
     };
   }

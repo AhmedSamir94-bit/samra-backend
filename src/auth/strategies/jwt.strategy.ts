@@ -8,6 +8,7 @@ interface JwtPayload {
   sub: string;
   username: string;
   name: string;
+  type?: 'access' | 'refresh';
 }
 
 @Injectable()
@@ -24,6 +25,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   validate(payload: JwtPayload): AuthUser {
     if (!payload.sub) {
+      throw new UnauthorizedException('رمز الدخول غير صالح');
+    }
+
+    // Reject refresh tokens used as Bearer access tokens
+    if (payload.type && payload.type !== 'access') {
       throw new UnauthorizedException('رمز الدخول غير صالح');
     }
 

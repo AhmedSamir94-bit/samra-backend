@@ -32,6 +32,16 @@ export class UsersService {
   }
 
   updateRefreshTokenHash(userId: string, refreshTokenHash?: string) {
+    if (refreshTokenHash === undefined) {
+      return this.userModel
+        .findByIdAndUpdate(
+          userId,
+          { $unset: { refreshTokenHash: 1 } },
+          { new: true },
+        )
+        .exec();
+    }
+
     return this.userModel
       .findByIdAndUpdate(userId, { refreshTokenHash }, { new: true })
       .exec();
@@ -39,22 +49,5 @@ export class UsersService {
 
   countUsers() {
     return this.userModel.countDocuments().exec();
-  }
-
-  async findUserByRefreshToken(refreshToken: string) {
-    const users = await this.userModel
-      .find({ refreshTokenHash: { $exists: true, $ne: null } })
-      .exec();
-
-    for (const user of users) {
-      if (
-        user.refreshTokenHash &&
-        (await bcrypt.compare(refreshToken, user.refreshTokenHash))
-      ) {
-        return user;
-      }
-    }
-
-    return null;
   }
 }

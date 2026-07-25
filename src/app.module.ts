@@ -28,9 +28,6 @@ if (!hasMongoUri) {
           MongooseModule.forRootAsync({
             imports: [ConfigModule],
             inject: [ConfigService],
-            // Fail fast on Vercel instead of long retry loops that look like timeouts.
-            retryAttempts: 2,
-            retryDelay: 1000,
             useFactory: (config: ConfigService) => {
               const uri = config.get<string>('MONGODB_URI')!;
               try {

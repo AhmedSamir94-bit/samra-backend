@@ -18,12 +18,26 @@ import { UsersModule } from './users/users.module';
     MongooseModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        uri:
+      useFactory: (config: ConfigService) => {
+        const uri =
           config.get<string>('MONGODB_URI') ||
-          'mongodb://admin:admin123@localhost:27017/samra?authSource=admin',
-        serverSelectionTimeoutMS: 10_000,
-      }),
+          'mongodb://admin:admin123@127.0.0.1:27017/samra?authSource=admin';
+
+        // Log host only (no credentials) to help debug Vercel boots.
+        try {
+          const host = new URL(uri.replace(/^mongodb(\+srv)?:\/\//, 'http://'))
+            .host;
+          console.log(`MongoDB target host: ${host}`);
+        } catch {
+          console.warn('MongoDB URI could not be parsed for logging');
+        }
+
+        return {
+          uri,
+          serverSelectionTimeoutMS: 8_000,
+          maxPoolSize: 5,
+        };
+      },
     }),
     UsersModule,
     AuthModule,

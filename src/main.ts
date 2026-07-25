@@ -4,11 +4,17 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  if (process.env.VERCEL === '1' && !process.env.MONGODB_URI) {
+    throw new Error(
+      'MONGODB_URI is missing in Vercel env. Set it in Project Settings → Environment Variables, then Redeploy.',
+    );
+  }
+
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
 
   app.setGlobalPrefix('api');
-
-  // Reflect request Origin so browser CORS works on Vercel (FE <-> BE).
   app.enableCors({
     origin: true,
     credentials: true,
@@ -20,7 +26,6 @@ async function bootstrap() {
       'x-admin-setup-key',
     ],
   });
-
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -56,8 +61,7 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
-  // Path is relative to global prefix → /api/docs
-  // Use CDN assets so swagger-ui-dist is not bundled into the serverless function.
+  // Global prefix → /api/docs. CDN assets keep the serverless bundle smaller.
   SwaggerModule.setup('docs', app, document, {
     customCssUrl:
       'https://cdn.jsdelivr.net/npm/swagger-ui-dist@5.17.14/swagger-ui.css',
@@ -72,8 +76,8 @@ async function bootstrap() {
 
   const port = process.env.PORT || 3000;
   await app.listen(port);
-  console.log(`Samra backend running on http://localhost:${port}`);
-  console.log(`Swagger docs at http://localhost:${port}/api/docs`);
+  console.log(`Samra backend running on port ${port}`);
+  console.log(`Swagger docs at /api/docs`);
 }
 
 bootstrap().catch((error) => {

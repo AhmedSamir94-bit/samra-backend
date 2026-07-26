@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { applyIdTransform } from '../../common/utils/schema.util';
+import { UserRole } from '../user-role';
 
 export type UserDocument = HydratedDocument<User>;
 
@@ -14,6 +15,13 @@ export class User {
 
   @Prop({ required: true, trim: true })
   name!: string;
+
+  @Prop({
+    type: String,
+    enum: Object.values(UserRole),
+    default: UserRole.ADMIN,
+  })
+  role!: UserRole;
 
   @Prop()
   refreshTokenHash?: string;

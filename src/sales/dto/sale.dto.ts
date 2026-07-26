@@ -21,7 +21,7 @@ class SaleCartItemDto {
 
   @Type(() => Number)
   @IsNumber()
-  @Min(1)
+  @Min(0.001)
   quantity!: number;
 }
 

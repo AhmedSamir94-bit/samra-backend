@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { randomBytes } from 'crypto';
 import { UsersService } from '../users/users.service';
+import { UserRole } from '../users/user-role';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { LoginDto } from './dto/login.dto';
 
@@ -32,11 +33,14 @@ export class AuthService {
     _id: { toString(): string };
     username: string;
     name: string;
+    role?: UserRole;
   }): Promise<TokenPair> {
+    const role = user.role || UserRole.SUPER_ADMIN;
     const payload = {
       sub: user._id.toString(),
       username: user.username,
       name: user.name,
+      role,
     };
 
     const accessToken = await this.jwtService.signAsync(payload);
@@ -63,15 +67,16 @@ export class AuthService {
       throw new UnauthorizedException('اسم المستخدم أو كلمة المرور غير صحيحة');
     }
 
+    if (!user.role) {
+      user.role = UserRole.SUPER_ADMIN;
+      await user.save();
+    }
+
     const tokens = await this.createTokenPair(user);
 
     return {
       ...tokens,
-      user: {
-        id: user._id.toString(),
-        username: user.username,
-        name: user.name,
-      },
+      user: this.usersService.toPublicUser(user),
     };
   }
 
@@ -82,15 +87,16 @@ export class AuthService {
       throw new UnauthorizedException('رمز التحديث غير صالح');
     }
 
+    if (!matchedUser.role) {
+      matchedUser.role = UserRole.SUPER_ADMIN;
+      await matchedUser.save();
+    }
+
     const tokens = await this.createTokenPair(matchedUser);
 
     return {
       ...tokens,
-      user: {
-        id: matchedUser._id.toString(),
-        username: matchedUser.username,
-        name: matchedUser.name,
-      },
+      user: this.usersService.toPublicUser(matchedUser),
     };
   }
 
@@ -105,20 +111,26 @@ export class AuthService {
       throw new UnauthorizedException('المستخدم غير موجود');
     }
 
-    return {
-      id: user._id.toString(),
-      username: user.username,
-      name: user.name,
-    };
+    if (!user.role) {
+      user.role = UserRole.SUPER_ADMIN;
+      await user.save();
+    }
+
+    return this.usersService.toPublicUser(user);
   }
 
   async createAdmin(dto: CreateAdminDto) {
-    const user = await this.usersService.create(dto);
+    const userCount = await this.usersService.countUsers();
+    const user = await this.usersService.create({
+      username: dto.username,
+      password: dto.password,
+      name: dto.name,
+      role:
+        userCount === 0
+          ? UserRole.SUPER_ADMIN
+          : dto.role || UserRole.ADMIN,
+    });
 
-    return {
-      id: user._id.toString(),
-      username: user.username,
-      name: user.name,
-    };
+    return this.usersService.toPublicUser(user);
   }
 }

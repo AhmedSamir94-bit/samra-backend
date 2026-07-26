@@ -5,6 +5,7 @@ import { Model } from 'mongoose';
 import { AppModule } from './app.module';
 import { Category } from './categories/schemas/category.schema';
 import { Product } from './products/schemas/product.schema';
+import { UserRole } from './users/user-role';
 import { User } from './users/schemas/user.schema';
 
 async function seed() {
@@ -14,6 +15,11 @@ async function seed() {
   const productModel = app.get<Model<Product>>(getModelToken(Product.name));
   const userModel = app.get<Model<User>>(getModelToken(User.name));
 
+  await userModel.updateMany(
+    { $or: [{ role: { $exists: false } }, { role: null }] },
+    { $set: { role: UserRole.SUPER_ADMIN } },
+  );
+
   const existingUsers = await userModel.countDocuments();
   if (existingUsers === 0) {
     const hashedPassword = await bcrypt.hash('admin123', 10);
@@ -21,8 +27,9 @@ async function seed() {
       username: 'admin',
       password: hashedPassword,
       name: 'مدير النظام',
+      role: UserRole.SUPER_ADMIN,
     });
-    console.log('Default admin user created (admin / admin123)');
+    console.log('Default super admin created (admin / admin123)');
   }
 
   const existingCategories = await categoryModel.countDocuments();

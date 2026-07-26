@@ -2,6 +2,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -9,6 +10,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
+import { ProductUnit } from '../../products/product-unit';
 
 class PurchaseItemDto {
   @IsString()
@@ -21,7 +23,7 @@ class PurchaseItemDto {
 
   @Type(() => Number)
   @IsNumber()
-  @Min(1)
+  @Min(0.001)
   quantity!: number;
 
   @Type(() => Number)
@@ -37,6 +39,10 @@ class PurchaseItemDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @IsOptional()
+  @IsEnum(ProductUnit)
+  unitType?: ProductUnit;
 }
 
 export class CreatePurchaseDto {

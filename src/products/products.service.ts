@@ -8,6 +8,7 @@ import {
 import { StockAlertService } from '../notifications/stock-alert.service';
 import { PurchaseInvoice } from '../purchases/schemas/purchase-invoice.schema';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
+import { ProductUnit } from './product-unit';
 import { Product } from './schemas/product.schema';
 
 @Injectable()
@@ -20,6 +21,10 @@ export class ProductsService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
+    await this.productModel.updateMany(
+      { $or: [{ unitType: { $exists: false } }, { unitType: null }] },
+      { $set: { unitType: ProductUnit.PIECE } },
+    );
     await this.syncCostsFromPurchases();
   }
 
@@ -80,16 +85,18 @@ export class ProductsService implements OnModuleInit {
 
   async create(dto: CreateProductDto) {
     const stock = dto.stock ?? 0;
+    const unitType = dto.unitType || ProductUnit.PIECE;
     const product = await this.productModel.create({
       name: dto.name.trim(),
       price: dto.price,
       cost: dto.cost ?? 0,
       stock,
+      unitType,
       barcode: dto.barcode?.trim() || undefined,
       category: dto.category?.trim() || undefined,
     });
 
-    this.stockAlertService.notifyInitialLowStock(product.name, stock);
+    this.stockAlertService.notifyInitialLowStock(product.name, stock, unitType);
 
     return product;
   }
@@ -108,6 +115,7 @@ export class ProductsService implements OnModuleInit {
           ...(dto.price !== undefined && { price: dto.price }),
           ...(dto.cost !== undefined && { cost: dto.cost }),
           ...(dto.stock !== undefined && { stock: dto.stock }),
+          ...(dto.unitType !== undefined && { unitType: dto.unitType }),
           ...(dto.barcode !== undefined && {
             barcode: dto.barcode?.trim() || undefined,
           }),
@@ -128,6 +136,7 @@ export class ProductsService implements OnModuleInit {
         name: product.name,
         previousStock: existing.stock,
         newStock: product.stock,
+        unitType: product.unitType,
       });
     }
 

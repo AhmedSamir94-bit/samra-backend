@@ -1,8 +1,11 @@
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/user-role';
 import { CreatePurchaseDto, UpdatePurchaseDto } from './dto/purchase.dto';
 import { PurchasesService } from './purchases.service';
 
 @Controller('purchases')
+@Roles(UserRole.SUPER_ADMIN)
 export class PurchasesController {
   constructor(private readonly purchasesService: PurchasesService) {}
 

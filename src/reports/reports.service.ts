@@ -268,7 +268,7 @@ export class ReportsService {
     const sales = await this.saleModel.find(dateFilter).exec();
     const grouped = new Map<
       string,
-      { name: string; quantity: number; revenue: number }
+      { name: string; quantity: number; revenue: number; unitType: string }
     >();
 
     for (const sale of sales) {
@@ -277,9 +277,11 @@ export class ReportsService {
           name: item.name,
           quantity: 0,
           revenue: 0,
+          unitType: item.unitType || 'piece',
         };
         existing.quantity += item.quantity;
         existing.revenue += item.price * item.quantity;
+        if (item.unitType) existing.unitType = item.unitType;
         grouped.set(item.name, existing);
       }
     }
@@ -293,7 +295,7 @@ export class ReportsService {
     const purchases = await this.purchaseModel.find(dateFilter).exec();
     const grouped = new Map<
       string,
-      { name: string; quantity: number; cost: number }
+      { name: string; quantity: number; cost: number; unitType: string }
     >();
 
     for (const purchase of purchases) {
@@ -302,9 +304,11 @@ export class ReportsService {
           name: item.productName,
           quantity: 0,
           cost: 0,
+          unitType: item.unitType || 'piece',
         };
         existing.quantity += item.quantity;
         existing.cost += item.purchasePrice * item.quantity;
+        if (item.unitType) existing.unitType = item.unitType;
         grouped.set(item.productName, existing);
       }
     }
@@ -331,6 +335,7 @@ export class ReportsService {
         name: product.name,
         quantity: soldMap.get(product.name) || 0,
         remaining: product.stock,
+        unitType: product.unitType || 'piece',
       }))
       .filter((row) => row.quantity > 0 || row.remaining > 0)
       .sort((a, b) => b.quantity - a.quantity);

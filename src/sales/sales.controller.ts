@@ -1,4 +1,6 @@
 import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/user-role';
 import { CreateSaleDto } from './dto/sale.dto';
 import { SalesService } from './sales.service';
 
@@ -7,11 +9,13 @@ export class SalesController {
   constructor(private readonly salesService: SalesService) {}
 
   @Get()
+  @Roles(UserRole.SUPER_ADMIN)
   findAll(@Query('from') from?: string, @Query('to') to?: string) {
     return this.salesService.findAll(from, to);
   }
 
   @Get(':id')
+  @Roles(UserRole.SUPER_ADMIN)
   findOne(@Param('id') id: string) {
     return this.salesService.findOne(id);
   }

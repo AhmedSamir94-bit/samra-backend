@@ -1,11 +1,13 @@
 import { Type } from 'class-transformer';
 import {
+  IsEnum,
   IsNotEmpty,
   IsNumber,
   IsOptional,
   IsString,
   Min,
 } from 'class-validator';
+import { ProductUnit } from '../product-unit';
 
 export class CreateProductDto {
   @IsString()
@@ -28,6 +30,10 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   cost?: number;
+
+  @IsOptional()
+  @IsEnum(ProductUnit)
+  unitType?: ProductUnit;
 
   @IsOptional()
   @IsString()
@@ -61,6 +67,10 @@ export class UpdateProductDto {
   @IsNumber()
   @Min(0)
   cost?: number;
+
+  @IsOptional()
+  @IsEnum(ProductUnit)
+  unitType?: ProductUnit;
 
   @IsOptional()
   @IsString()

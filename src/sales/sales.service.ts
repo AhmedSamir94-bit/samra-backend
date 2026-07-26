@@ -7,6 +7,7 @@ import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model } from 'mongoose';
 import { getCurrentTime, getDateRange, calculateSaleItemsTotal } from '../common/utils/schema.util';
 import { StockAlertService } from '../notifications/stock-alert.service';
+import { ProductUnit } from '../products/product-unit';
 import { Product } from '../products/schemas/product.schema';
 import { CreateSaleDto } from './dto/sale.dto';
 import { SaleInvoice } from './schemas/sale-invoice.schema';
@@ -42,8 +43,12 @@ export class SalesService {
 
     try {
       const saleItems = [];
-      const stockChanges: { name: string; previousStock: number; newStock: number }[] =
-        [];
+      const stockChanges: {
+        name: string;
+        previousStock: number;
+        newStock: number;
+        unitType?: ProductUnit | string;
+      }[] = [];
 
       for (const item of dto.items) {
         const product = await this.productModel
@@ -65,12 +70,6 @@ export class SalesService {
         product.stock -= item.quantity;
         await product.save({ session });
 
-        stockChanges.push({
-          name: product.name,
-          previousStock,
-          newStock: product.stock,
-        });
-
         saleItems.push({
           productId: product._id,
           name: product.name,
@@ -78,6 +77,14 @@ export class SalesService {
           quantity: item.quantity,
           barcode: product.barcode,
           unitCost: Number(product.cost ?? 0),
+          unitType: product.unitType || ProductUnit.PIECE,
+        });
+
+        stockChanges.push({
+          name: product.name,
+          previousStock,
+          newStock: product.stock,
+          unitType: product.unitType,
         });
       }
 

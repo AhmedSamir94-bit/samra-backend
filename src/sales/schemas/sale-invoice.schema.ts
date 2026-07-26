@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument, Types } from 'mongoose';
 import { applyIdTransform } from '../../common/utils/schema.util';
+import { ProductUnit } from '../../products/product-unit';
 
 @Schema({ _id: false })
 export class SaleItem {
@@ -13,7 +14,7 @@ export class SaleItem {
   @Prop({ required: true, min: 0 })
   price!: number;
 
-  @Prop({ required: true, min: 1 })
+  @Prop({ required: true, min: 0.001 })
   quantity!: number;
 
   @Prop()
@@ -21,6 +22,13 @@ export class SaleItem {
 
   @Prop({ default: 0, min: 0 })
   unitCost?: number;
+
+  @Prop({
+    type: String,
+    enum: Object.values(ProductUnit),
+    default: ProductUnit.PIECE,
+  })
+  unitType?: ProductUnit;
 }
 
 export const SaleItemSchema = SchemaFactory.createForClass(SaleItem);

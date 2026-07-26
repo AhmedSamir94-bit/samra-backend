@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
 import { applyIdTransform } from '../../common/utils/schema.util';
+import { ProductUnit } from '../product-unit';
 
 export type ProductDocument = HydratedDocument<Product>;
 
@@ -17,6 +18,13 @@ export class Product {
 
   @Prop({ required: true, default: 0, min: 0 })
   stock!: number;
+
+  @Prop({
+    type: String,
+    enum: Object.values(ProductUnit),
+    default: ProductUnit.PIECE,
+  })
+  unitType!: ProductUnit;
 
   @Prop({ trim: true, sparse: true, unique: true })
   barcode?: string;

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ProductUnit } from '../products/product-unit';
 import { WhatsappService } from './whatsapp.service';
 
 /** Alert when stock is at or below this level (5, 4, 3, 2, 1, 0). */
@@ -8,6 +9,7 @@ export interface StockChange {
   name: string;
   previousStock: number;
   newStock: number;
+  unitType?: ProductUnit | string;
 }
 
 @Injectable()
@@ -20,8 +22,15 @@ export class StockAlertService {
     return stock <= LOW_STOCK_LIMIT;
   }
 
+  private unitLabel(stock: number, unitType?: ProductUnit | string) {
+    if (unitType === ProductUnit.KG || unitType === 'kg') {
+      return 'كجم';
+    }
+    return stock === 1 ? 'قطعة' : 'قطع';
+  }
+
   notifyIfLowStock(change: StockChange) {
-    const { name, previousStock, newStock } = change;
+    const { name, previousStock, newStock, unitType } = change;
 
     if (newStock >= previousStock || !this.isLowStock(newStock)) {
       return;
@@ -39,7 +48,9 @@ export class StockAlertService {
     this.logger.log(
       `Low stock alert: ${name} ${previousStock} → ${newStock}, sending WhatsApp`,
     );
-    void this.whatsappService.sendToOwner(this.buildMessage(name, newStock));
+    void this.whatsappService.sendToOwner(
+      this.buildMessage(name, newStock, unitType),
+    );
   }
 
   notifyBatch(changes: StockChange[]) {
@@ -48,25 +59,35 @@ export class StockAlertService {
     }
   }
 
-  notifyInitialLowStock(productName: string, stock: number) {
+  notifyInitialLowStock(
+    productName: string,
+    stock: number,
+    unitType?: ProductUnit | string,
+  ) {
     if (!this.isLowStock(stock)) {
       return;
     }
 
-    void this.whatsappService.sendToOwner(this.buildMessage(productName, stock));
+    void this.whatsappService.sendToOwner(
+      this.buildMessage(productName, stock, unitType),
+    );
   }
 
-  private buildMessage(productName: string, stock: number) {
+  private buildMessage(
+    productName: string,
+    stock: number,
+    unitType?: ProductUnit | string,
+  ) {
+    const unit = this.unitLabel(stock, unitType);
+
     if (stock === 0) {
       return (
         `⚠️ تنبيه مخزون — Samra POS\n\n` +
         `المنتج: ${productName}\n` +
-        `الحالة: نفد المخزون (0 قطعة)\n\n` +
+        `الحالة: نفد المخزون (0 ${unit})\n\n` +
         `يرجى إعادة التوريد في أقرب وقت.`
       );
     }
-
-    const unit = stock === 1 ? 'قطعة' : 'قطع';
 
     return (
       `⚠️ تنبيه مخزون — Samra POS\n\n` +

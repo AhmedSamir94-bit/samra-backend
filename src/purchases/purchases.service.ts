@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { ClientSession, Connection, Model } from 'mongoose';
 import { getCurrentTime, getDateRange, getTodayDateString, calculatePurchaseItemsTotal, calculateWeightedAverageCost } from '../common/utils/schema.util';
+import { ProductUnit } from '../products/product-unit';
 import { Product } from '../products/schemas/product.schema';
 import { CreatePurchaseDto, UpdatePurchaseDto } from './dto/purchase.dto';
 import { PurchaseInvoice, PurchaseItem } from './schemas/purchase-invoice.schema';
@@ -13,6 +14,7 @@ type ValidPurchaseItem = {
   purchasePrice: number;
   salePrice: number;
   category?: string;
+  unitType?: string;
 };
 
 @Injectable()
@@ -68,6 +70,7 @@ export class PurchasesService {
         purchasePrice: item.purchasePrice,
         salePrice: item.salePrice,
         category: item.category?.trim() || '',
+        unitType: item.unitType || ProductUnit.PIECE,
       }));
   }
 
@@ -79,6 +82,7 @@ export class PurchasesService {
       purchasePrice: item.purchasePrice,
       salePrice: item.salePrice,
       category: item.category || '',
+      unitType: (item.unitType as ProductUnit) || ProductUnit.PIECE,
     }));
   }
 
@@ -139,6 +143,7 @@ export class PurchasesService {
         product.price = item.salePrice;
         if (item.category) product.category = item.category;
         if (barcode) product.barcode = barcode;
+        if (item.unitType) product.unitType = item.unitType as ProductUnit;
         await product.save({ session });
       } else {
         await this.productModel.create(
@@ -148,6 +153,7 @@ export class PurchasesService {
               price: item.salePrice,
               cost: item.purchasePrice,
               stock: item.quantity,
+              unitType: (item.unitType as ProductUnit) || ProductUnit.PIECE,
               barcode: barcode || undefined,
               category: item.category || undefined,
             },

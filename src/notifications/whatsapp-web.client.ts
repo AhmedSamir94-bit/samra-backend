@@ -6,14 +6,26 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import * as QRCode from 'qrcode';
-import { Client, LocalAuth } from 'whatsapp-web.js';
 import { normalizeWhatsappPhone } from './phone.util';
+
+type WhatsappWebClient = {
+  on: (event: string, handler: (...args: unknown[]) => void) => void;
+  once: (event: string, handler: (...args: unknown[]) => void) => void;
+  off: (event: string, handler: (...args: unknown[]) => void) => void;
+  initialize: () => Promise<void>;
+  destroy: () => Promise<void>;
+  sendMessage: (
+    chatId: string,
+    message: string,
+  ) => Promise<{ id: { id: string } }>;
+  info?: { wid?: { user?: string } };
+};
 
 @Injectable()
 export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(WhatsappWebClientService.name);
 
-  private client: Client | null = null;
+  private client: WhatsappWebClient | null = null;
   private ready = false;
   private lastQr: string | null = null;
   private linkedPhone: string | null = null;
@@ -21,6 +33,9 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
   constructor(private configService: ConfigService) {}
 
   isActive() {
+    if (process.env.VERCEL === '1') {
+      return false;
+    }
     return (
       this.configService.get<string>('WHATSAPP_ENABLED') === 'true' &&
       this.configService.get<string>('WHATSAPP_PROVIDER') === 'wwebjs'
@@ -32,7 +47,13 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
       return;
     }
 
-    this.start();
+    try {
+      await this.start();
+    } catch (error) {
+      this.logger.error(
+        `Failed to start whatsapp-web.js: ${error instanceof Error ? error.message : error}`,
+      );
+    }
   }
 
   async onModuleDestroy() {
@@ -42,7 +63,21 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private start() {
+  private async start() {
+    // Optional local dependency — not installed on Vercel (use greenapi there).
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let Client: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let LocalAuth: any;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      ({ Client, LocalAuth } = require('whatsapp-web.js'));
+    } catch {
+      throw new Error(
+        'whatsapp-web.js is not installed. Use WHATSAPP_PROVIDER=greenapi on Vercel, or npm i whatsapp-web.js locally.',
+      );
+    }
+
     const sessionPath =
       this.configService.get<string>('WHATSAPP_WEB_SESSION_PATH') ||
       '.wwebjs_auth';
@@ -60,10 +95,10 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         ...(chromePath ? { executablePath: chromePath } : {}),
       },
-    });
+    }) as WhatsappWebClient;
 
-    this.client.on('qr', (qr: any) => {
-      this.lastQr = qr;
+    this.client.on('qr', (qr: unknown) => {
+      this.lastQr = String(qr);
       this.ready = false;
       this.logger.warn(
         'WhatsApp Web QR required — open GET /api/notifications/whatsapp/qr and scan with your phone',
@@ -79,17 +114,17 @@ export class WhatsappWebClientService implements OnModuleInit, OnModuleDestroy {
       );
     });
 
-    this.client.on('auth_failure', (message: any) => {
+    this.client.on('auth_failure', (message: unknown) => {
       this.ready = false;
       this.logger.error(`whatsapp-web.js auth failure: ${message}`);
     });
 
-    this.client.on('disconnected', (reason: any) => {
+    this.client.on('disconnected', (reason: unknown) => {
       this.ready = false;
       this.logger.warn(`whatsapp-web.js disconnected: ${reason}`);
     });
 
-    void this.client.initialize();
+    await this.client.initialize();
   }
 
   getStatus() {

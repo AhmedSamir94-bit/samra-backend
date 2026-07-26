@@ -57,10 +57,11 @@ Swagger UI: `http://localhost:3000/api/docs` (production: `https://samra-backend
 | Products | `GET/POST /api/products`, `GET /api/products/barcode/:code`, `PUT/DELETE /api/products/:id` |
 | Sales | `GET/POST /api/sales`, `GET /api/sales/:id` |
 | Purchases | `GET/POST /api/purchases`, `GET /api/purchases/:id` |
+| Expenses | `GET/POST /api/expenses`, `GET /api/expenses/types`, `PUT/DELETE /api/expenses/:id` |
 | Reports | `GET /api/reports/:type?from=&to=` |
 | Notifications | `POST /api/notifications/whatsapp/test` |
 
-Report types: `sales`, `purchases`, `profits`, `top-selling`, `purchased-items`, `sold-items`.
+Report types: `sales`, `purchases`, `expenses`, `profits`, `top-selling`, `purchased-items`, `sold-items`.
 
 ## WhatsApp alerts (Green API)
 

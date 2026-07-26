@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { Expense, ExpenseSchema } from '../expenses/schemas/expense.schema';
 import { Product, ProductSchema } from '../products/schemas/product.schema';
 import {
   PurchaseInvoice,
@@ -14,6 +15,7 @@ import { ReportsService } from './reports.service';
     MongooseModule.forFeature([
       { name: SaleInvoice.name, schema: SaleInvoiceSchema },
       { name: PurchaseInvoice.name, schema: PurchaseInvoiceSchema },
+      { name: Expense.name, schema: ExpenseSchema },
       { name: Product.name, schema: ProductSchema },
     ]),
   ],

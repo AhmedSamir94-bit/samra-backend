@@ -2,6 +2,11 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { getDateRange, calculateSaleItemsTotal, calculatePurchaseItemsTotal, buildPurchaseAverageCostMap, resolveProductCost } from '../common/utils/schema.util';
+import {
+  EXPENSE_TYPE_LABELS,
+  ExpenseType,
+} from '../expenses/expense-type';
+import { Expense } from '../expenses/schemas/expense.schema';
 import { Product, ProductDocument } from '../products/schemas/product.schema';
 import { PurchaseInvoice } from '../purchases/schemas/purchase-invoice.schema';
 import { SaleInvoice } from '../sales/schemas/sale-invoice.schema';
@@ -9,6 +14,7 @@ import { SaleInvoice } from '../sales/schemas/sale-invoice.schema';
 const REPORT_TYPES = [
   'sales',
   'purchases',
+  'expenses',
   'profits',
   'top-selling',
   'purchased-items',
@@ -23,6 +29,7 @@ export class ReportsService {
     @InjectModel(SaleInvoice.name) private saleModel: Model<SaleInvoice>,
     @InjectModel(PurchaseInvoice.name)
     private purchaseModel: Model<PurchaseInvoice>,
+    @InjectModel(Expense.name) private expenseModel: Model<Expense>,
     @InjectModel(Product.name) private productModel: Model<Product>,
   ) {}
 
@@ -38,6 +45,8 @@ export class ReportsService {
         return this.getSalesReport(dateFilter);
       case 'purchases':
         return this.getPurchasesReport(dateFilter);
+      case 'expenses':
+        return this.getExpensesReport(dateFilter);
       case 'profits':
         return this.getProfitsReport(dateFilter);
       case 'top-selling':
@@ -194,13 +203,72 @@ export class ReportsService {
     return Array.from(grouped.values());
   }
 
+  private async getExpensesReport(dateFilter: Record<string, unknown>) {
+    const expenses = await this.expenseModel
+      .find(dateFilter)
+      .sort({ date: 1 })
+      .exec();
+
+    const byDate = new Map<
+      string,
+      { date: string; count: number; total: number }
+    >();
+    const byType = new Map<
+      string,
+      { type: string; label: string; count: number; total: number }
+    >();
+
+    let grandTotal = 0;
+
+    for (const expense of expenses) {
+      grandTotal += expense.amount;
+
+      const day = byDate.get(expense.date) || {
+        date: expense.date,
+        count: 0,
+        total: 0,
+      };
+      day.count += 1;
+      day.total += expense.amount;
+      byDate.set(expense.date, day);
+
+      const typeKey = expense.type;
+      const typeRow = byType.get(typeKey) || {
+        type: typeKey,
+        label: EXPENSE_TYPE_LABELS[typeKey as ExpenseType] || typeKey,
+        count: 0,
+        total: 0,
+      };
+      typeRow.count += 1;
+      typeRow.total += expense.amount;
+      byType.set(typeKey, typeRow);
+    }
+
+    return {
+      total: Number(grandTotal.toFixed(2)),
+      count: expenses.length,
+      byDate: Array.from(byDate.values()).map((row) => ({
+        ...row,
+        total: Number(row.total.toFixed(2)),
+      })),
+      byType: Array.from(byType.values())
+        .map((row) => ({
+          ...row,
+          total: Number(row.total.toFixed(2)),
+        }))
+        .sort((a, b) => b.total - a.total),
+    };
+  }
+
   private async getProfitsReport(dateFilter: Record<string, unknown>) {
-    const [sales, purchases, allPurchases, products] = await Promise.all([
-      this.saleModel.find(dateFilter).sort({ date: 1 }).exec(),
-      this.purchaseModel.find(dateFilter).sort({ date: 1 }).exec(),
-      this.purchaseModel.find().exec(),
-      this.productModel.find().exec(),
-    ]);
+    const [sales, purchases, expenses, allPurchases, products] =
+      await Promise.all([
+        this.saleModel.find(dateFilter).sort({ date: 1 }).exec(),
+        this.purchaseModel.find(dateFilter).sort({ date: 1 }).exec(),
+        this.expenseModel.find(dateFilter).sort({ date: 1 }).exec(),
+        this.purchaseModel.find().exec(),
+        this.productModel.find().exec(),
+      ]);
     const purchaseAvgMap = buildPurchaseAverageCostMap(allPurchases);
     const productIdCostMap = this.buildProductIdCostMap(products, purchaseAvgMap);
 
@@ -210,6 +278,7 @@ export class ReportsService {
         date: string;
         revenue: number;
         cogs: number;
+        expenses: number;
         netProfit: number;
         purchases: number;
       }
@@ -230,6 +299,7 @@ export class ReportsService {
         date: sale.date,
         revenue: 0,
         cogs: 0,
+        expenses: 0,
         netProfit: 0,
         purchases: 0,
       };
@@ -246,6 +316,7 @@ export class ReportsService {
         date: purchase.date,
         revenue: 0,
         cogs: 0,
+        expenses: 0,
         netProfit: 0,
         purchases: 0,
       };
@@ -253,11 +324,26 @@ export class ReportsService {
       grouped.set(purchase.date, existing);
     }
 
+    for (const expense of expenses) {
+      const existing = grouped.get(expense.date) || {
+        date: expense.date,
+        revenue: 0,
+        cogs: 0,
+        expenses: 0,
+        netProfit: 0,
+        purchases: 0,
+      };
+      existing.expenses += expense.amount;
+      existing.netProfit -= expense.amount;
+      grouped.set(expense.date, existing);
+    }
+
     return Array.from(grouped.values())
       .map((row) => ({
         date: row.date,
         revenue: Number(row.revenue.toFixed(2)),
         cogs: Number(row.cogs.toFixed(2)),
+        expenses: Number(row.expenses.toFixed(2)),
         netProfit: Number(row.netProfit.toFixed(2)),
         purchases: Number(row.purchases.toFixed(2)),
       }))

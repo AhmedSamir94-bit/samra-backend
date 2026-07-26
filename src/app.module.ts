@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { ProductsModule } from './products/products.module';
 import { SalesModule } from './sales/sales.module';
 import { PurchasesModule } from './purchases/purchases.module';
+import { ExpensesModule } from './expenses/expenses.module';
 import { ReportsModule } from './reports/reports.module';
 import { UsersModule } from './users/users.module';
 
@@ -31,6 +32,7 @@ import { UsersModule } from './users/users.module';
     ProductsModule,
     SalesModule,
     PurchasesModule,
+    ExpensesModule,
     ReportsModule,
   ],
   controllers: [AppController],

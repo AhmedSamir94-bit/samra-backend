@@ -4,3 +4,4 @@ dist/
 mongo-keyfile
 .wwebjs_auth/
 *.log
+.vercel

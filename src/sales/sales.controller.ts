@@ -10,8 +10,12 @@ export class SalesController {
 
   @Get()
   @Roles(UserRole.SUPER_ADMIN)
-  findAll(@Query('from') from?: string, @Query('to') to?: string) {
-    return this.salesService.findAll(from, to);
+  findAll(
+    @Query('from') from?: string,
+    @Query('to') to?: string,
+    @Query('source') source?: 'pos' | 'delivery',
+  ) {
+    return this.salesService.findAll(from, to, source);
   }
 
   @Get(':id')

@@ -22,11 +22,17 @@ export class SalesService {
     private stockAlertService: StockAlertService,
   ) {}
 
-  findAll(from?: string, to?: string) {
-    return this.saleModel
-      .find(getDateRange(from, to))
-      .sort({ createdAt: -1 })
-      .exec();
+  findAll(from?: string, to?: string, source?: 'pos' | 'delivery') {
+    const filter: Record<string, unknown> = { ...getDateRange(from, to) };
+    if (source) {
+      if (source === 'pos') {
+        // Treat legacy invoices (no source) as POS sales
+        filter.$or = [{ source: 'pos' }, { source: { $exists: false } }];
+      } else {
+        filter.source = source;
+      }
+    }
+    return this.saleModel.find(filter).sort({ createdAt: -1 }).exec();
   }
 
   async findOne(id: string) {
@@ -37,7 +43,10 @@ export class SalesService {
     return sale;
   }
 
-  async create(dto: CreateSaleDto, options?: { skipStockDeduction?: boolean }) {
+  async create(
+    dto: CreateSaleDto,
+    options?: { skipStockDeduction?: boolean },
+  ) {
     const session = await this.connection.startSession();
     session.startTransaction();
 
@@ -109,6 +118,9 @@ export class SalesService {
             items: saleItems,
             total,
             cashier: dto.cashier || 'البائع الرئيسي',
+            source: dto.source || 'pos',
+            customerOrderId: dto.customerOrderId,
+            customerOrderNumber: dto.customerOrderNumber,
           },
         ],
         { session },

@@ -1,4 +1,9 @@
-import { Injectable, NotFoundException, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -10,6 +15,26 @@ import { PurchaseInvoice } from '../purchases/schemas/purchase-invoice.schema';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
 import { ProductUnit } from './product-unit';
 import { Product } from './schemas/product.schema';
+
+const MAX_IMAGE_URL_LENGTH = 1_500_000;
+
+function normalizeImageUrl(imageUrl?: string | null): string | undefined {
+  if (imageUrl === undefined) return undefined;
+  if (imageUrl === null || imageUrl.trim() === '') return undefined;
+
+  const value = imageUrl.trim();
+  if (value.length > MAX_IMAGE_URL_LENGTH) {
+    throw new BadRequestException('صورة المنتج كبيرة جداً — اختر صورة أصغر');
+  }
+
+  const isDataUrl = /^data:image\/(jpeg|jpg|png|webp|gif);base64,/i.test(value);
+  const isHttpUrl = /^https?:\/\//i.test(value);
+  if (!isDataUrl && !isHttpUrl) {
+    throw new BadRequestException('صيغة صورة المنتج غير صالحة');
+  }
+
+  return value;
+}
 
 @Injectable()
 export class ProductsService implements OnModuleInit {
@@ -94,6 +119,7 @@ export class ProductsService implements OnModuleInit {
       unitType,
       barcode: dto.barcode?.trim() || undefined,
       category: dto.category?.trim() || undefined,
+      imageUrl: normalizeImageUrl(dto.imageUrl),
     });
 
     this.stockAlertService.notifyInitialLowStock(product.name, stock, unitType);
@@ -121,6 +147,9 @@ export class ProductsService implements OnModuleInit {
           }),
           ...(dto.category !== undefined && {
             category: dto.category?.trim() || undefined,
+          }),
+          ...(dto.imageUrl !== undefined && {
+            imageUrl: normalizeImageUrl(dto.imageUrl) || null,
           }),
         },
         { new: true, runValidators: true },

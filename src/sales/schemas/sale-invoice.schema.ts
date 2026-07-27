@@ -54,6 +54,16 @@ export class SaleInvoice {
 
   @Prop({ required: true, default: 'البائع الرئيسي' })
   cashier!: string;
+
+  /** pos = cashier sale, delivery = customer order */
+  @Prop({ type: String, enum: ['pos', 'delivery'], default: 'pos', index: true })
+  source!: 'pos' | 'delivery';
+
+  @Prop({ trim: true })
+  customerOrderId?: string;
+
+  @Prop({ trim: true })
+  customerOrderNumber?: string;
 }
 
 export const SaleInvoiceSchema = SchemaFactory.createForClass(SaleInvoice);

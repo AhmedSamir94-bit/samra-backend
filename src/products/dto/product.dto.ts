@@ -49,6 +49,13 @@ export class CreateProductDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Product image as data URL (image/*;base64,...) or https URL',
+  })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }
 
 export class UpdateProductDto {
@@ -92,4 +99,11 @@ export class UpdateProductDto {
   @IsOptional()
   @IsString()
   category?: string;
+
+  @ApiPropertyOptional({
+    description: 'Product image as data URL (image/*;base64,...) or https URL',
+  })
+  @IsOptional()
+  @IsString()
+  imageUrl?: string;
 }

@@ -3,6 +3,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
   IsArray,
+  IsIn,
   IsNotEmpty,
   IsNumber,
   IsOptional,
@@ -41,4 +42,19 @@ export class CreateSaleDto {
   @IsOptional()
   @IsString()
   cashier?: string;
+
+  @ApiPropertyOptional({ enum: ['pos', 'delivery'], default: 'pos' })
+  @IsOptional()
+  @IsIn(['pos', 'delivery'])
+  source?: 'pos' | 'delivery';
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  customerOrderId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  customerOrderNumber?: string;
 }

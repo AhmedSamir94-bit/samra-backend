@@ -12,6 +12,7 @@ function toPublicProduct(product: {
   unitType: string;
   barcode?: string;
   category?: string;
+  imageUrl?: string;
 }) {
   return {
     id: product._id.toString(),
@@ -21,6 +22,7 @@ function toPublicProduct(product: {
     unitType: product.unitType,
     barcode: product.barcode,
     category: product.category,
+    imageUrl: product.imageUrl,
   };
 }
 

@@ -31,6 +31,10 @@ export class Product {
 
   @Prop({ trim: true })
   category?: string;
+
+  /** Data URL or remote image URL for product photo */
+  @Prop({ trim: true })
+  imageUrl?: string;
 }
 
 export const ProductSchema = SchemaFactory.createForClass(Product);

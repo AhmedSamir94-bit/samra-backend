@@ -96,6 +96,16 @@ export class OrdersService {
       stockDeducted: false,
     });
 
+    try {
+      // Reserve stock immediately so POS cannot oversell the same units
+      await this.deductStock(order);
+      order.stockDeducted = true;
+      await order.save();
+    } catch (error) {
+      await this.orderModel.findByIdAndDelete(order._id).exec();
+      throw error;
+    }
+
     await this.pushService.notifyStaff({
       title: `طلب جديد ${order.orderNumber}`,
       body: `${session.name} — ${session.deliveryAddress}`,
@@ -208,6 +218,9 @@ export class OrdersService {
           quantity: item.quantity,
         })),
         cashier: 'طلب توصيل',
+        source: 'delivery',
+        customerOrderId: order._id.toString(),
+        customerOrderNumber: order.orderNumber,
       },
       { skipStockDeduction: true },
     );

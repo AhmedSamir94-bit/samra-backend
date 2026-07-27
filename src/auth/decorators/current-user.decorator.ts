@@ -3,9 +3,10 @@ import { UserRole } from '../../users/user-role';
 
 export interface AuthUser {
   userId: string;
-  username: string;
+  username?: string;
   name: string;
   role: UserRole;
+  phone?: string;
 }
 
 export const CurrentUser = createParamDecorator(

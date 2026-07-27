@@ -37,7 +37,7 @@ export class SalesService {
     return sale;
   }
 
-  async create(dto: CreateSaleDto) {
+  async create(dto: CreateSaleDto, options?: { skipStockDeduction?: boolean }) {
     const session = await this.connection.startSession();
     session.startTransaction();
 
@@ -60,15 +60,24 @@ export class SalesService {
           throw new BadRequestException(`المنتج ${item.name} غير موجود`);
         }
 
-        if (product.stock < item.quantity) {
-          throw new BadRequestException(
-            `الكمية غير كافية للمنتج ${product.name}`,
-          );
-        }
+        if (!options?.skipStockDeduction) {
+          if (product.stock < item.quantity) {
+            throw new BadRequestException(
+              `الكمية غير كافية للمنتج ${product.name}`,
+            );
+          }
 
-        const previousStock = product.stock;
-        product.stock -= item.quantity;
-        await product.save({ session });
+          const previousStock = product.stock;
+          product.stock -= item.quantity;
+          await product.save({ session });
+
+          stockChanges.push({
+            name: product.name,
+            previousStock,
+            newStock: product.stock,
+            unitType: product.unitType,
+          });
+        }
 
         saleItems.push({
           productId: product._id,
@@ -78,13 +87,6 @@ export class SalesService {
           barcode: product.barcode,
           unitCost: Number(product.cost ?? 0),
           unitType: product.unitType || ProductUnit.PIECE,
-        });
-
-        stockChanges.push({
-          name: product.name,
-          previousStock,
-          newStock: product.stock,
-          unitType: product.unitType,
         });
       }
 

@@ -125,6 +125,14 @@ export class UsersService implements OnModuleInit {
     return this.userModel.countDocuments().exec();
   }
 
+  async findAllStaffIds(): Promise<string[]> {
+    const users = await this.userModel
+      .find({ role: { $in: [UserRole.SUPER_ADMIN, UserRole.ADMIN] } })
+      .select('_id')
+      .exec();
+    return users.map((u) => u._id.toString());
+  }
+
   async ensureRolesForExistingUsers() {
     await this.userModel
       .updateMany(

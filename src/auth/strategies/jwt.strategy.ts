@@ -7,9 +7,10 @@ import { AuthUser } from '../decorators/current-user.decorator';
 
 interface JwtPayload {
   sub: string;
-  username: string;
+  username?: string;
   name: string;
   role?: UserRole;
+  phone?: string;
 }
 
 @Injectable()
@@ -34,6 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       username: payload.username,
       name: payload.name,
       role: payload.role || UserRole.SUPER_ADMIN,
+      phone: payload.phone,
     };
   }
 }

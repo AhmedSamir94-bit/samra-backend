@@ -9,6 +9,7 @@ import {
   Put,
   Query,
 } from '@nestjs/common';
+import { Public } from '../auth/decorators/public.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { UserRole } from '../users/user-role';
 import { CreateProductDto, UpdateProductDto } from './dto/product.dto';
@@ -18,16 +19,19 @@ import { ProductsService } from './products.service';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
+  @Public()
   @Get()
   findAll(@Query('search') search?: string) {
     return this.productsService.findAll(search);
   }
 
+  @Public()
   @Get('barcode/:code')
   findByBarcode(@Param('code') code: string) {
     return this.productsService.findByBarcode(code);
   }
 
+  @Public()
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.productsService.findOne(id);

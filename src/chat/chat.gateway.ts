@@ -27,7 +27,13 @@ interface SocketUser {
 
 type ChatSocket = Socket & { data: { user?: SocketUser } };
 
-@WebSocketGateway({ cors: { origin: true, credentials: true } })
+@WebSocketGateway({
+  cors: {
+    origin: true,
+    credentials: true,
+    methods: ['GET', 'POST'],
+  },
+})
 export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
   private readonly logger = new Logger(ChatGateway.name);
 

@@ -14,6 +14,9 @@ export class GuestSession {
 
   @Prop({ required: true, trim: true })
   deliveryAddress!: string;
+
+  @Prop()
+  refreshTokenHash?: string;
 }
 
 export const GuestSessionSchema = SchemaFactory.createForClass(GuestSession);

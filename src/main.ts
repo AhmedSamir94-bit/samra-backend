@@ -2,6 +2,8 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { getCorsOptions } = require('./common/cors.config');
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
@@ -11,17 +13,7 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
 
   app.setGlobalPrefix('api');
-  app.enableCors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'x-admin-setup-key',
-    ],
-  });
+  app.enableCors(getCorsOptions());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

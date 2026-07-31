@@ -2,6 +2,7 @@ const { NestFactory } = require('@nestjs/core');
 const { ExpressAdapter } = require('@nestjs/platform-express');
 const { ValidationPipe } = require('@nestjs/common');
 const express = require('express');
+const { getCorsOptions, applyCorsHeaders } = require('../src/common/cors.config');
 
 let cached;
 
@@ -24,17 +25,7 @@ async function bootstrap() {
   );
 
   app.setGlobalPrefix('api');
-  app.enableCors({
-    origin: true,
-    credentials: true,
-    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'x-admin-setup-key',
-    ],
-  });
+  app.enableCors(getCorsOptions());
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -63,32 +54,23 @@ async function bootstrap() {
 }
 
 module.exports = async (req, res) => {
+  // Answer preflight immediately so cold starts never fail CORS.
+  applyCorsHeaders(req, res);
+  if (req.method === 'OPTIONS') {
+    res.statusCode = 204;
+    res.end();
+    return;
+  }
+
   try {
     const server = await bootstrap();
     return server(req, res);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error('api/index bootstrap failed:', message);
+    applyCorsHeaders(req, res);
     res.statusCode = 500;
     res.setHeader('Content-Type', 'application/json');
-    res.setHeader(
-      'Access-Control-Allow-Origin',
-      req.headers.origin || '*',
-    );
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.setHeader(
-      'Access-Control-Allow-Headers',
-      'Content-Type, Authorization, Accept, x-admin-setup-key',
-    );
-    res.setHeader(
-      'Access-Control-Allow-Methods',
-      'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    );
-    if (req.method === 'OPTIONS') {
-      res.statusCode = 204;
-      res.end();
-      return;
-    }
     res.end(
       JSON.stringify({
         statusCode: 500,

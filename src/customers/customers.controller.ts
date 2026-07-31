@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../auth/decorators/public.decorator';
 import { CurrentUser, AuthUser } from '../auth/decorators/current-user.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
+import { RefreshDto } from '../auth/dto/refresh.dto';
 import { UserRole } from '../users/user-role';
 import { CustomersService } from './customers.service';
 import { CreateGuestSessionDto } from './dto/guest-session.dto';
@@ -17,6 +18,13 @@ export class CustomersController {
   @ApiOperation({ summary: 'Create guest session (name + phone + address)' })
   createSession(@Body() dto: CreateGuestSessionDto) {
     return this.customersService.createSession(dto);
+  }
+
+  @Public()
+  @Post('session/refresh')
+  @ApiOperation({ summary: 'Refresh guest access token' })
+  refreshSession(@Body() dto: RefreshDto) {
+    return this.customersService.refresh(dto.refreshToken);
   }
 
   @Get('session')

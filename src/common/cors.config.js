@@ -48,15 +48,19 @@ function applyCorsHeaders(req, res) {
   const requestOrigin = req.headers && req.headers.origin;
   const configured = parseCorsOrigins();
 
-  let allowOrigin = '*';
+  let allowOrigin = null;
   if (requestOrigin) {
     if (configured === true) {
       allowOrigin = requestOrigin;
     } else if (Array.isArray(configured) && configured.includes(requestOrigin)) {
       allowOrigin = requestOrigin;
-    } else if (Array.isArray(configured) && configured.length > 0) {
-      allowOrigin = configured[0];
     }
+  } else if (configured === true) {
+    allowOrigin = '*';
+  }
+
+  if (!allowOrigin) {
+    return;
   }
 
   res.setHeader('Access-Control-Allow-Origin', allowOrigin);

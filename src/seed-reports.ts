@@ -43,9 +43,11 @@ function randomTime() {
   const minute = randomInt(0, 59);
   const date = new Date();
   date.setHours(hour, minute, 0, 0);
-  return date.toLocaleTimeString('ar-EG', {
-    hour: '2-digit',
+  return date.toLocaleTimeString('en-EG', {
+    timeZone: 'Africa/Cairo',
+    hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   });
 }
 

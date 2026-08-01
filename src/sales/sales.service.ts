@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectConnection, InjectModel } from '@nestjs/mongoose';
 import { Connection, Model } from 'mongoose';
-import { getCurrentTime, getDateRange, calculateSaleItemsTotal } from '../common/utils/schema.util';
+import { getCurrentTime, getDateRange, getTodayDateString, calculateSaleItemsTotal } from '../common/utils/schema.util';
 import { StockAlertService } from '../notifications/stock-alert.service';
 import { ProductUnit } from '../products/product-unit';
 import { Product } from '../products/schemas/product.schema';
@@ -107,13 +107,14 @@ export class SalesService {
       );
 
       const now = new Date();
-      const invoiceNumber = `INV-${now.toISOString().slice(0, 10).replace(/-/g, '')}-${now.getTime().toString().slice(-4)}`;
+      const date = getTodayDateString();
+      const invoiceNumber = `INV-${date.replace(/-/g, '')}-${now.getTime().toString().slice(-4)}`;
 
       const [sale] = await this.saleModel.create(
         [
           {
             invoiceNumber,
-            date: now.toISOString().slice(0, 10),
+            date,
             time: getCurrentTime(),
             items: saleItems,
             total,

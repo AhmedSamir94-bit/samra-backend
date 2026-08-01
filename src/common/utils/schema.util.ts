@@ -22,19 +22,22 @@ export function getDateRange(from?: string, to?: string) {
   return filter;
 }
 
+const EGYPT_TIME_ZONE = 'Africa/Cairo';
+
 export function getCurrentTime() {
-  return new Date().toLocaleTimeString('ar-EG', {
-    hour: '2-digit',
+  return new Date().toLocaleTimeString('en-EG', {
+    timeZone: EGYPT_TIME_ZONE,
+    hour: 'numeric',
     minute: '2-digit',
+    hour12: true,
   });
 }
 
 export function getTodayDateString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  // Use Cairo calendar day so UTC midnight on the server does not shift the date.
+  return new Date().toLocaleDateString('en-CA', {
+    timeZone: EGYPT_TIME_ZONE,
+  });
 }
 
 export function calculatePurchaseItemsTotal(
